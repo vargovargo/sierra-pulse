@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+:root {
+  /* Alpine dark theme — default */
+  --c-bg:          #0F1621;
+  --c-surface:     #1A2332;
+  --c-surface-2:   #22304A;
+  --c-border:      #2A3848;
+  --c-text:        #E8EDF5;
+  --c-text-muted:  #7A8A9A;
+  --c-text-dim:    #4A5A6A;
+
+  /* Semantic accent colors — color encodes meaning */
+  --c-snow:   #7AB8CC;   /* cool blue — snow / water */
+  --c-fire:   #E8622A;   /* warm orange — fire / heat */
+  --c-go:     #4CAF82;   /* green — open / passable */
+  --c-stop:   #E85050;   /* red — closed / danger */
+  --c-warn:   #E8B84A;   /* amber — caution */
+
+  --c-font-mono: 'DM Mono', 'Fira Mono', ui-monospace, monospace;
+  --c-font-sans: 'Inter', system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  background-color: var(--c-bg);
+  color: var(--c-text);
+  font-family: var(--c-font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--c-snow);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Utility: monospace data display */
+.mono {
+  font-family: var(--c-font-mono);
+}
+
+/* Mapbox popup — dark theme override */
+.mapboxgl-popup-content {
+  background: var(--c-surface) !important;
+  border: 1px solid var(--c-border) !important;
+  border-radius: 8px !important;
+  padding: 12px 14px !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important;
+}
+
+.mapboxgl-popup-tip {
+  display: none !important;
+}
+
+.sierra-popup .mapboxgl-popup-content {
+  min-width: 160px;
+}

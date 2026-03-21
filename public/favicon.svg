@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="6" fill="#0F1621"/>
+  <!-- Sierra peaks silhouette -->
+  <polygon points="4,26 10,12 16,20 22,8 28,26" fill="none" stroke="#7AB8CC" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- Snow cap dot -->
+  <circle cx="22" cy="8" r="2" fill="#7AB8CC"/>
+</svg>

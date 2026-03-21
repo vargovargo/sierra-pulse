@@ -1,0 +1,31 @@
+# Supabase local dev config
+# Run: supabase start
+
+[api]
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+
+[db]
+port = 54322
+major_version = 15
+
+[studio]
+port = 54323
+
+[inbucket]
+port = 54324
+
+[storage]
+file_size_limit = "50MiB"
+
+[auth]
+enabled = false
+
+# Cron schedules — set these in Supabase dashboard → Edge Functions → Schedule
+# (or via pg_cron migration for self-hosted)
+#
+# ingest-cdec:       0 */12 * * *   (12h — snowpack changes daily)
+# ingest-usgs:       0 */6  * * *   (6h  — discharge spikes during melt)
+# ingest-nps-alerts: 0 */2  * * *   (2h)
+# ingest-aqi:        0 */2  * * *   (2h  — smoke moves fast)
