@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { useStations } from '../../hooks/useStations.js'
@@ -95,6 +96,7 @@ function buildPopupHtml(station, obs, weeklyEfforts) {
 }
 
 export default function MapView() {
+  const navigate = useNavigate()
   const mapContainer = useRef(null)
   const mapRef       = useRef(null)
   const mapLoaded    = useRef(false)
@@ -371,15 +373,23 @@ export default function MapView() {
         const props = e.features[0]?.properties ?? {}
         const scoreStr = props.score != null ? `Score ${props.score}` : 'No data'
         const statusColor = STATUS_COLOR[props.status] ?? STATUS_COLOR.unknown
-        new mapboxgl.Popup({ closeButton: false })
+        const popup = new mapboxgl.Popup({ closeButton: false })
           .setLngLat(e.lngLat)
           .setHTML(`
-            <div style="font-family:Inter,sans-serif;min-width:160px">
+            <div style="font-family:Inter,sans-serif;min-width:180px">
               <div style="font-weight:600;font-size:13px;color:#E8EFF8;margin-bottom:4px">${props.name}</div>
-              <div style="font-size:12px;color:${statusColor};font-family:monospace;text-transform:uppercase">${props.status ?? '—'} · ${scoreStr}</div>
+              <div style="font-size:12px;color:${statusColor};font-family:monospace;text-transform:uppercase;margin-bottom:10px">${props.status ?? '—'} · ${scoreStr}</div>
+              <a data-strike-nav="true" href="#" style="display:inline-block;font-size:11px;font-weight:600;color:#7AB8CC;text-decoration:none;border:1px solid #7AB8CC33;border-radius:4px;padding:4px 10px;font-family:Inter,sans-serif">View strike window →</a>
             </div>
           `)
           .addTo(map)
+        popup.getElement().addEventListener('click', (ev) => {
+          if (ev.target.dataset.strikeNav) {
+            ev.preventDefault()
+            popup.remove()
+            navigate('/strike')
+          }
+        })
       })
     }
 

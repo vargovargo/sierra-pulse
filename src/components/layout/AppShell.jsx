@@ -49,7 +49,6 @@ function PermitReleaseNotice() {
       display:    'flex',
       alignItems: 'center',
       gap:        5,
-      marginLeft: 'auto',
       fontSize:   11,
       fontFamily: 'var(--c-font-mono)',
       whiteSpace: 'nowrap',
