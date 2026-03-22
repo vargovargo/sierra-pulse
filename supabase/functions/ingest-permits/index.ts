@@ -3,64 +3,52 @@
  * Fetches overnight wilderness permit availability from Recreation.gov
  * for Eastern Sierra (Bishop area) trailhead entry points.
  *
- * Writes rows to the `permits` table (trailhead / date / available / quota).
- * compute-strike-windows reads permits WHERE date in next 14 days.
- * Frontend reads permits WHERE date in the 6-month planning target window.
+ * Uses the Inyo-specific v2 availability endpoint (no API key required):
+ *   GET /api/permitinyo/{facilityId}/availabilityv2?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD&commercial_acct=false
  *
- * Fetches all months from current through +6 months (7 API calls per run).
- * One call per month to the Recreation.gov availability endpoint covers all divisions.
+ * Fetches today through +6 months in a single request.
+ * Writes rows to the `permits` table (trailhead / date / available / quota).
  *
  * Schedule: every 2 hours (0 *\/2 * * *)
- * Auth: RIDB_API_KEY
- * Target table: stations (source='recgov', metadata.zone set), permits
+ * Auth: none required
  */
 
 import { corsHeaders, handleCors } from '../_shared/cors.ts'
 import { getSupabaseAdmin }        from '../_shared/supabaseAdmin.ts'
 import { INYO_FACILITY_ID, DIVISIONS } from './divisions.ts'
 
-const RECGOV_BASE = 'https://www.recreation.gov/api/permits'
+const RECGOV_BASE = 'https://www.recreation.gov/api/permitinyo'
 
-/**
- * Fetch one month of availability for a facility.
- * Returns null payload (with reason) if the permit is seasonal/disabled.
- */
+interface DivisionSlot {
+  quota_usage_by_member_daily: { total: number; remaining: number }
+  is_walkup:        boolean
+  not_yet_released?: boolean
+  release_date?:     string
+}
+
+type AvailabilityPayload = Record<string, Record<string, DivisionSlot>>
+
 async function fetchAvailability(
   facilityId: string,
-  startDate:  Date,
-  apiKey:     string,
-): Promise<{ payload: Record<string, Record<string, { remaining: number; total: number }>> | null; skipped?: string }> {
-  const iso = new Date(startDate)
-  iso.setUTCHours(0, 0, 0, 0)
-  const url = `${RECGOV_BASE}/${facilityId}/availability/month` +
-    `?start_date=${encodeURIComponent(iso.toISOString())}`
+  startDate:  string,  // YYYY-MM-DD
+  endDate:    string,  // YYYY-MM-DD
+): Promise<AvailabilityPayload> {
+  const url = `${RECGOV_BASE}/${facilityId}/availabilityv2` +
+    `?start_date=${startDate}&end_date=${endDate}&commercial_acct=false`
 
   const resp = await fetch(url, {
     headers: {
-      'apikey':     apiKey,
       'User-Agent': 'Mozilla/5.0 (compatible; SierraPulse/1.0)',
       'Accept':     'application/json',
     },
   })
 
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
   const json = await resp.json()
-
-  if (typeof json?.error === 'string' && json.error.toLowerCase().includes('disabled')) {
-    return { payload: null, skipped: `Permit ${facilityId} not yet open for season` }
-  }
-
-  if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${json?.error ?? 'unknown'}`)
-
-  return { payload: json?.payload ?? {} }
+  return json?.payload ?? {}
 }
 
-/**
- * Convert availability payload → permit rows for the `permits` table.
- * trailhead_id = raw division ID (e.g. "459"), matching permit_div_ids in zone_config.ts
- */
-function buildPermitRows(
-  availability: Record<string, Record<string, { remaining: number; total: number }>>,
-) {
+function buildPermitRows(payload: AvailabilityPayload) {
   const rows: Array<{
     trailhead:    string
     trailhead_id: string
@@ -71,22 +59,34 @@ function buildPermitRows(
     forest:       string
   }> = []
 
-  for (const [dateStr, divMap] of Object.entries(availability)) {
+  for (const [dateStr, divMap] of Object.entries(payload)) {
     for (const div of DIVISIONS) {
       const slot = divMap?.[div.id]
       if (!slot) continue
+      const { total, remaining } = slot.quota_usage_by_member_daily
       rows.push({
         trailhead:    div.name,
         trailhead_id: div.id,
-        date:         new Date(dateStr).toISOString().split('T')[0],
-        quota:        slot.total,
-        available:    slot.remaining,
+        date:         dateStr.split('T')[0],
+        quota:        total,
+        available:    remaining,
         permit_type:  'overnight',
         forest:       'Inyo National Forest',
       })
     }
   }
   return rows
+}
+
+/** First and last day of a month offset by N months from today, as YYYY-MM-DD strings */
+function monthRange(offsetMonths: number): { start: string; end: string } {
+  const d = new Date()
+  d.setDate(1)
+  d.setMonth(d.getMonth() + offsetMonths)
+  const start = d.toISOString().split('T')[0]
+  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0)
+  const end = last.toISOString().split('T')[0]
+  return { start, end }
 }
 
 Deno.serve(async (req: Request) => {
@@ -97,14 +97,6 @@ Deno.serve(async (req: Request) => {
     stations_upserted: 0,
     permits_inserted:  0,
     errors: [] as string[],
-  }
-
-  const apiKey = Deno.env.get('RIDB_API_KEY')
-  if (!apiKey) {
-    return new Response(
-      JSON.stringify({ error: 'Missing RIDB_API_KEY' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
   }
 
   const supabase = getSupabaseAdmin()
@@ -128,46 +120,36 @@ Deno.serve(async (req: Request) => {
     results.stations_upserted = stationRows.length
   }
 
-  // --- Determine fetch targets: every month from current through +6 months ---
-  const currentMonth = new Date()
-  currentMonth.setUTCDate(1)
-  currentMonth.setUTCHours(0, 0, 0, 0)
-
-  const targets: Date[] = []
-  for (let m = 0; m <= 6; m++) {
-    const t = new Date(currentMonth)
-    t.setUTCMonth(t.getUTCMonth() + m)
-    targets.push(t)
-  }
-
-  // --- Fetch all months and merge rows ---
+  // --- Fetch month by month, current through +6 months ---
   const allPermitRows: ReturnType<typeof buildPermitRows> = []
 
-  for (const target of targets) {
+  for (let m = 0; m <= 6; m++) {
+    const { start, end } = monthRange(m)
     try {
-      const { payload, skipped } = await fetchAvailability(INYO_FACILITY_ID, target, apiKey)
-      if (!payload) {
-        results.errors.push(`WARN: ${skipped} (${target.toISOString().slice(0, 7)})`)
-        continue
-      }
+      const payload = await fetchAvailability(INYO_FACILITY_ID, start, end)
       allPermitRows.push(...buildPermitRows(payload))
     } catch (err) {
-      results.errors.push(`Fetch ${target.toISOString().slice(0, 7)}: ${(err as Error).message}`)
+      results.errors.push(`Fetch ${start.slice(0, 7)}: ${(err as Error).message}`)
     }
   }
 
-  // --- Write to permits table (replaces old observations approach) ---
-  if (allPermitRows.length > 0) {
-    const { data: inserted, error: permErr } = await supabase
-      .from('permits')
-      .upsert(allPermitRows, { onConflict: 'trailhead_id,date,permit_type', ignoreDuplicates: false })
-      .select('id')
+  try {
+    const permitRows = allPermitRows
 
-    if (permErr) {
-      results.errors.push(`Permits upsert: ${permErr.message}`)
-    } else {
-      results.permits_inserted = inserted?.length ?? 0
+    if (permitRows.length > 0) {
+      const { data: inserted, error: permErr } = await supabase
+        .from('permits')
+        .upsert(permitRows, { onConflict: 'trailhead_id,date,permit_type', ignoreDuplicates: false })
+        .select('id')
+
+      if (permErr) {
+        results.errors.push(`Permits upsert: ${permErr.message}`)
+      } else {
+        results.permits_inserted = inserted?.length ?? 0
+      }
     }
+  } catch (err) {
+    results.errors.push(`Fetch: ${(err as Error).message}`)
   }
 
   return new Response(JSON.stringify(results), {
