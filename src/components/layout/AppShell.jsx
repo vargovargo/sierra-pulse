@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import TutorialModal from '../shared/TutorialModal'
 
 /** Returns current hour (0–23) in Pacific time */
 function pacificHour() {
@@ -72,23 +73,44 @@ function PermitReleaseNotice() {
 
 export default function AppShell({ children }) {
   const { pathname } = useLocation()
+  const [showTutorial, setShowTutorial] = useState(false)
+
+  useEffect(() => {
+    if (!localStorage.getItem('sierra_pulse_tutorial_seen')) {
+      setShowTutorial(true)
+    }
+  }, [])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
+      {/* Permit window strip — sits above the nav row, no overflow on mobile */}
+      <div style={{
+        background: 'var(--c-bg)',
+        borderBottom: '1px solid var(--c-border)',
+        padding: '0 16px',
+        height: 28,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+      }}>
+        <PermitReleaseNotice />
+      </div>
+
       <header style={{
         background: 'var(--c-surface)',
         borderBottom: '1px solid var(--c-border)',
-        padding: '0 24px',
+        padding: '0 16px',
         height: 48,
         display: 'flex',
         alignItems: 'center',
-        gap: 24,
+        gap: 16,
         flexShrink: 0,
       }}>
-        <Link to="/" style={{ color: 'var(--c-text)', fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em' }}>
+        <Link to="/" style={{ color: 'var(--c-text)', fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', flexShrink: 0 }}>
           Sierra Pulse
         </Link>
-        <nav style={{ display: 'flex', gap: 4, marginLeft: 8 }}>
+        <nav style={{ display: 'flex', gap: 4, marginLeft: 4 }}>
           {[
             { to: '/',        label: 'Dashboard' },
             { to: '/history', label: 'Water & Snow' },
@@ -96,24 +118,54 @@ export default function AppShell({ children }) {
             { to: '/strike',  label: 'Strike' },
           ].map(({ to, label }) => (
             <Link key={to} to={to} style={{
-              padding: '4px 12px',
+              padding: '4px 10px',
               borderRadius: 6,
               fontSize: 13,
               fontWeight: pathname === to ? 600 : 400,
               color: pathname === to ? 'var(--c-text)' : 'var(--c-text-muted)',
               background: pathname === to ? 'var(--c-surface-2)' : 'transparent',
               textDecoration: 'none',
+              whiteSpace: 'nowrap',
             }}>
               {label}
             </Link>
           ))}
         </nav>
-        <PermitReleaseNotice />
+
+        <button
+          onClick={() => setShowTutorial(true)}
+          title="Site tour"
+          style={{
+            marginLeft: 'auto',
+            width: 28,
+            height: 28,
+            borderRadius: '50%',
+            border: '1px solid var(--c-border)',
+            background: 'var(--c-surface-2)',
+            color: 'var(--c-text-muted)',
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          ?
+        </button>
       </header>
 
       <main style={{ flex: 1, padding: '24px', display: 'flex', flexDirection: 'column' }}>
         {children}
       </main>
+
+      {showTutorial && (
+        <TutorialModal onClose={() => {
+          localStorage.setItem('sierra_pulse_tutorial_seen', '1')
+          setShowTutorial(false)
+        }} />
+      )}
     </div>
   )
 }
