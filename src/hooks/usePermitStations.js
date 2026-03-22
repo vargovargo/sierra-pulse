@@ -2,10 +2,13 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase.js'
 
 /**
- * Fetch trailhead permit availability for a zone, 6 months out.
+ * Fetch trailhead permit availability for a zone, today → +6 months.
  * Only runs when zone is non-null (lazy — fires on card expand).
  *
- * Returns trailheads: [{ name, trailhead_id, datesAvailable, totalDates, targetMonth }]
+ * Returns trailheads: [{
+ *   name, trailhead_id,
+ *   dates: [{ date, available, quota }]  -- sorted ascending, quota > 0 only
+ * }]
  */
 export function usePermitStations(zone) {
   const [trailheads, setTrailheads] = useState([])
@@ -18,8 +21,7 @@ export function usePermitStations(zone) {
     setLoading(true)
     setError(null)
 
-    async function fetch() {
-      // 1. Get permit stations for this zone via metadata.zone
+    async function load() {
       const { data: stations, error: stErr } = await supabase
         .from('stations')
         .select('id, name, source_id')
@@ -29,52 +31,38 @@ export function usePermitStations(zone) {
       if (stErr) { setError(stErr); setLoading(false); return }
       if (!stations?.length) { setTrailheads([]); setLoading(false); return }
 
-      // 2. Extract division IDs from source_ids (format: "233262-{div_id}")
       const divIds = stations.map(s => s.source_id.split('-').pop())
 
-      // 3. Compute target month: first day of month 6 months from today
-      const target = new Date()
-      target.setDate(1)
-      target.setMonth(target.getMonth() + 6)
-      const targetStart = target.toISOString().split('T')[0]           // YYYY-MM-01
-      const targetEnd   = new Date(target.getFullYear(), target.getMonth() + 1, 0)
-        .toISOString().split('T')[0]                                   // last day of month
-      const targetMonth = target.toLocaleString('en-US', { month: 'long', year: 'numeric' })
+      const today   = new Date().toISOString().split('T')[0]
+      const sixMo   = new Date()
+      sixMo.setMonth(sixMo.getMonth() + 6)
+      const sixMoStr = sixMo.toISOString().split('T')[0]
 
-      // 4. Fetch permit availability for target month
       const { data: permits, error: permErr } = await supabase
         .from('permits')
         .select('trailhead_id, date, available, quota')
         .in('trailhead_id', divIds)
-        .gte('date', targetStart)
-        .lte('date', targetEnd)
+        .gte('date', today)
+        .lte('date', sixMoStr)
+        .order('date', { ascending: true })
 
       if (permErr) { setError(permErr); setLoading(false); return }
 
-      // 5. Merge stations with permit rows
-      const permitsByDivId = {}
+      const byDivId = {}
       for (const p of permits ?? []) {
-        if (!permitsByDivId[p.trailhead_id]) permitsByDivId[p.trailhead_id] = []
-        permitsByDivId[p.trailhead_id].push(p)
+        if (p.quota === 0) continue  // skip walkup/non-quota dates
+        if (!byDivId[p.trailhead_id]) byDivId[p.trailhead_id] = []
+        byDivId[p.trailhead_id].push({ date: p.date, available: p.available, quota: p.quota })
       }
 
-      const merged = stations.map(s => {
+      setTrailheads(stations.map(s => {
         const divId = s.source_id.split('-').pop()
-        const rows  = permitsByDivId[divId] ?? []
-        return {
-          name:           s.name,
-          trailhead_id:   divId,
-          datesAvailable: rows.filter(r => r.available > 0).length,
-          totalDates:     rows.length,
-          targetMonth,
-        }
-      })
-
-      setTrailheads(merged)
+        return { name: s.name, trailhead_id: divId, dates: byDivId[divId] ?? [] }
+      }))
       setLoading(false)
     }
 
-    fetch()
+    load()
   }, [zone])
 
   return { trailheads, loading, error }

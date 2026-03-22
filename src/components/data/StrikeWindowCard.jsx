@@ -5,7 +5,7 @@
  * window_status: 'go' | 'caution' | 'blocked' | 'unknown'
  */
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { usePermitStations } from '../../hooks/usePermitStations.js'
 
 const STATUS_CONFIG = {
@@ -56,8 +56,25 @@ function FlagPill({ label, value }) {
   )
 }
 
+function fmtMonthLabel(ym) {
+  const [y, m] = ym.split('-')
+  return new Date(+y, +m - 1, 1).toLocaleString('en-US', { month: 'short', year: 'numeric' })
+}
+
 function TrailheadPanel({ zone }) {
   const { trailheads, loading, error } = usePermitStations(zone)
+  const [activeMonth, setActiveMonth] = useState(null)
+
+  // Collect all months that have data across all trailheads
+  const allMonths = useMemo(() => {
+    const months = new Set()
+    for (const t of trailheads) {
+      for (const d of t.dates) months.add(d.date.slice(0, 7))
+    }
+    return Array.from(months).sort()
+  }, [trailheads])
+
+  const currentMonth = activeMonth ?? allMonths[0] ?? null
 
   if (loading) {
     return (
@@ -83,54 +100,111 @@ function TrailheadPanel({ zone }) {
     )
   }
 
-  const targetMonth = trailheads[0]?.targetMonth
+  // If no quota dates at all, show off-season message
+  if (allMonths.length === 0) {
+    return (
+      <div style={{
+        marginTop:  12,
+        paddingTop: 12,
+        borderTop:  '1px solid var(--c-border)',
+        fontSize:   12,
+        color:      'var(--c-text-dim)',
+      }}>
+        Season opens ~May 1 — no quota dates available yet.
+      </div>
+    )
+  }
 
   return (
     <div style={{
-      marginTop:    12,
-      paddingTop:   12,
-      borderTop:    '1px solid var(--c-border)',
+      marginTop:  12,
+      paddingTop: 12,
+      borderTop:  '1px solid var(--c-border)',
     }}>
-      <div style={{
-        fontSize:      11,
-        fontFamily:    'var(--c-font-mono)',
-        color:         'var(--c-text-dim)',
-        textTransform: 'uppercase',
-        letterSpacing: '0.06em',
-        marginBottom:  8,
-      }}>
-        Trailheads — {targetMonth}
+      {/* Month tabs */}
+      <div
+        style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 14 }}
+        onClick={e => e.stopPropagation()}
+      >
+        {allMonths.map(ym => {
+          const active = ym === currentMonth
+          return (
+            <button
+              key={ym}
+              onClick={e => { e.stopPropagation(); setActiveMonth(ym) }}
+              style={{
+                padding:       '3px 10px',
+                borderRadius:  4,
+                border:        `1px solid ${active ? 'var(--c-border)' : 'transparent'}`,
+                background:    active ? 'var(--c-surface-2)' : 'transparent',
+                color:         active ? 'var(--c-text)' : 'var(--c-text-dim)',
+                fontSize:      11,
+                fontFamily:    'var(--c-font-mono)',
+                cursor:        'pointer',
+                letterSpacing: '0.04em',
+              }}
+            >
+              {fmtMonthLabel(ym)}
+            </button>
+          )
+        })}
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {/* Per-trailhead date grid */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {trailheads.map(t => {
-          const hasData    = t.totalDates > 0
-          const available  = hasData && t.datesAvailable > 0
-          const color      = !hasData
-            ? 'var(--c-text-dim)'
-            : available ? 'var(--c-go)' : 'var(--c-stop)'
-
+          const monthDates = t.dates.filter(d => d.date.startsWith(currentMonth ?? ''))
           return (
-            <div key={t.trailhead_id} style={{
-              display:        'flex',
-              justifyContent: 'space-between',
-              alignItems:     'center',
-              fontSize:        12,
-            }}>
-              <span style={{ color: 'var(--c-text)' }}>{t.name}</span>
-              <span style={{
+            <div key={t.trailhead_id}>
+              <div style={{
+                fontSize:      11,
                 fontFamily:    'var(--c-font-mono)',
-                fontSize:       11,
-                color,
+                color:         'var(--c-text-muted)',
                 textTransform: 'uppercase',
-                letterSpacing: '0.04em',
+                letterSpacing: '0.05em',
+                marginBottom:  6,
               }}>
-                {!hasData
-                  ? 'Season opens ~May 1'
-                  : available
-                    ? `${t.datesAvailable} of ${t.totalDates} days open`
-                    : 'Full'}
-              </span>
+                {t.name}
+              </div>
+
+              {monthDates.length === 0 ? (
+                <span style={{ fontSize: 11, color: 'var(--c-text-dim)' }}>
+                  No quota dates this month
+                </span>
+              ) : (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {monthDates.map(d => {
+                    const day   = +d.date.slice(8)
+                    const avail = d.available > 0
+                    return (
+                      <div
+                        key={d.date}
+                        title={`${d.date}: ${d.available} of ${d.quota} available`}
+                        style={{
+                          width:      38,
+                          padding:    '5px 2px 4px',
+                          borderRadius: 4,
+                          background: avail ? 'rgba(74,197,132,0.10)' : 'rgba(239,68,68,0.07)',
+                          border:     `1px solid ${avail ? 'rgba(74,197,132,0.30)' : 'rgba(239,68,68,0.25)'}`,
+                          textAlign:  'center',
+                          fontSize:   10,
+                          fontFamily: 'var(--c-font-mono)',
+                          lineHeight: 1.3,
+                        }}
+                      >
+                        <div style={{ color: 'var(--c-text-dim)' }}>{day}</div>
+                        <div style={{
+                          color:      avail ? 'var(--c-go)' : 'var(--c-stop)',
+                          fontWeight: 600,
+                          fontSize:   11,
+                        }}>
+                          {avail ? d.available : '✕'}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           )
         })}
