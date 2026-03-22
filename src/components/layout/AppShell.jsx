@@ -9,49 +9,63 @@ function pacificHour() {
   )
 }
 
-/** Date exactly 6 calendar months from today, formatted "Mon D" */
-function releaseDate() {
+/** Format a date offset from today by N days or months */
+function fmtOffset({ months = 0, days = 0 }) {
   const d = new Date()
-  d.setMonth(d.getMonth() + 6)
+  if (months) d.setMonth(d.getMonth() + months)
+  if (days)   d.setDate(d.getDate() + days)
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/Los_Angeles' })
+}
+
+function Dot({ color }) {
+  return <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0, display: 'inline-block' }} />
+}
+
+function Sep({ color = 'var(--c-border)' }) {
+  return <span style={{ color }}>·</span>
 }
 
 function PermitReleaseNotice() {
   const [hour, setHour] = useState(pacificHour)
 
   useEffect(() => {
-    // Refresh at the top of each hour so state updates without reload
     const ms = (60 - new Date().getMinutes()) * 60_000 - new Date().getSeconds() * 1000
     const t = setTimeout(() => setHour(pacificHour()), ms)
     return () => clearTimeout(t)
   }, [hour])
 
-  const date   = releaseDate()
-  const recLive  = hour >= 7
-  const caLive   = hour >= 8
+  const sixMo   = fmtOffset({ months: 6 })   // initial release window
+  const twoWk   = fmtOffset({ days: 14 })    // additional permits window
 
-  const recText  = recLive  ? `Rec.gov ${date} live`     : `Rec.gov ${date} opens 7am`
-  const caText   = caLive   ? `ReserveCalifornia live`   : `ReserveCalifornia opens 8am`
-  const color    = (recLive && caLive) ? 'var(--c-go)' : recLive ? 'var(--c-warn)' : 'var(--c-text-dim)'
+  const recLive = hour >= 7
+  const caLive  = hour >= 8
+  const recColor = recLive ? 'var(--c-go)'  : 'var(--c-text-dim)'
+  const caColor  = caLive  ? 'var(--c-go)'  : 'var(--c-text-dim)'
+  const dotColor = recLive && caLive ? 'var(--c-go)' : recLive ? 'var(--c-warn)' : 'var(--c-text-dim)'
 
   return (
     <div style={{
       display:    'flex',
       alignItems: 'center',
-      gap:        6,
+      gap:        5,
       marginLeft: 'auto',
       fontSize:   11,
       fontFamily: 'var(--c-font-mono)',
-      color:      'var(--c-text-dim)',
       whiteSpace: 'nowrap',
     }}>
-      <span style={{
-        width: 6, height: 6, borderRadius: '50%',
-        background: color, flexShrink: 0,
-      }} />
-      <span style={{ color }}>{recText}</span>
-      <span style={{ color: 'var(--c-border)' }}>·</span>
-      <span style={{ color: caLive ? 'var(--c-go)' : 'var(--c-text-dim)' }}>{caText}</span>
+      <Dot color={dotColor} />
+      {/* Rec.gov — two release windows both open at 7am */}
+      <span style={{ color: recColor }}>
+        Rec.gov {sixMo} <span style={{ opacity: 0.6 }}>(6mo)</span>
+        {' '}<span style={{ color: 'var(--c-border)' }}>+</span>{' '}
+        {twoWk} <span style={{ opacity: 0.6 }}>(2wk)</span>
+        {recLive ? ' live' : ' opens 7am'}
+      </span>
+      <Sep />
+      {/* ReserveCalifornia — 8am */}
+      <span style={{ color: caColor }}>
+        ReserveCalifornia {caLive ? 'live' : 'opens 8am'}
+      </span>
     </div>
   )
 }
