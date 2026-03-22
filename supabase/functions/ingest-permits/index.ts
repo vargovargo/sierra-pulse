@@ -7,9 +7,8 @@
  * compute-strike-windows reads permits WHERE date in next 14 days.
  * Frontend reads permits WHERE date in the 6-month planning target window.
  *
- * Fetches two months per run:
- *   - Current month  (for strike window engine: is there any availability soon?)
- *   - +6 months out  (for trailhead detail panel: planning window availability)
+ * Fetches all months from current through +6 months (7 API calls per run).
+ * One call per month to the Recreation.gov availability endpoint covers all divisions.
  *
  * Schedule: every 2 hours (0 *\/2 * * *)
  * Auth: RIDB_API_KEY
@@ -129,18 +128,22 @@ Deno.serve(async (req: Request) => {
     results.stations_upserted = stationRows.length
   }
 
-  // --- Determine fetch targets: current month + 6 months out ---
+  // --- Determine fetch targets: every month from current through +6 months ---
   const currentMonth = new Date()
   currentMonth.setUTCDate(1)
   currentMonth.setUTCHours(0, 0, 0, 0)
 
-  const forwardMonth = new Date(currentMonth)
-  forwardMonth.setUTCMonth(forwardMonth.getUTCMonth() + 6)
+  const targets: Date[] = []
+  for (let m = 0; m <= 6; m++) {
+    const t = new Date(currentMonth)
+    t.setUTCMonth(t.getUTCMonth() + m)
+    targets.push(t)
+  }
 
-  // --- Fetch both months and merge rows ---
+  // --- Fetch all months and merge rows ---
   const allPermitRows: ReturnType<typeof buildPermitRows> = []
 
-  for (const target of [currentMonth, forwardMonth]) {
+  for (const target of targets) {
     try {
       const { payload, skipped } = await fetchAvailability(INYO_FACILITY_ID, target, apiKey)
       if (!payload) {
