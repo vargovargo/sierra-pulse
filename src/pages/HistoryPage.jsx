@@ -134,17 +134,19 @@ export default function HistoryPage() {
         Current conditions and historical context (1991–2020 climatology).
       </p>
 
-      {/* Current streamflow */}
-      <SectionTitle>Streamflow — Current Conditions</SectionTitle>
-      <ErrorBoundary>
-        <StationsTable source="usgs" type="streamflow" />
-      </ErrorBoundary>
+      {/* Current streamflow + snowpack */}
+      <div data-tour="history-content">
+        <SectionTitle>Streamflow — Current Conditions</SectionTitle>
+        <ErrorBoundary>
+          <StationsTable source="usgs" type="streamflow" />
+        </ErrorBoundary>
 
-      {/* Current snowpack */}
-      <SectionTitle>Snowpack — Current Conditions</SectionTitle>
-      <ErrorBoundary>
-        <StationsTable source="cdec" type="snow" />
-      </ErrorBoundary>
+        {/* Current snowpack */}
+        <SectionTitle>Snowpack — Current Conditions</SectionTitle>
+        <ErrorBoundary>
+          <StationsTable source="cdec" type="snow" />
+        </ErrorBoundary>
+      </div>
 
       {/* Historical envelope charts */}
       {loading && <LoadingSpinner />}

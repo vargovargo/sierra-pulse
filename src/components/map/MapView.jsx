@@ -266,43 +266,45 @@ export default function MapView() {
   useEffect(() => {
     const geojson = buildZoneGeojson(windows)
 
+    let hoveredZoneId = null
+
     function addZoneLayers() {
       const map = mapRef.current
       if (!map || !mapLoaded.current) return
 
-      const STATUS_FILL = {
-        go:      'rgba(74,197,132,0.12)',
-        caution: 'rgba(251,191,36,0.12)',
-        blocked: 'rgba(239,68,68,0.12)',
-        unknown: 'rgba(136,153,170,0.06)',
-      }
-      const STATUS_LINE = {
+      const STATUS_COLOR = {
         go:      '#4AC584',
         caution: '#FBbf24',
         blocked: '#EF4444',
         unknown: '#8899AA',
       }
 
+      const colorExpr = ['match', ['get', 'status'],
+        'go',      STATUS_COLOR.go,
+        'caution', STATUS_COLOR.caution,
+        'blocked', STATUS_COLOR.blocked,
+        STATUS_COLOR.unknown,
+      ]
+
       if (map.getSource('zones')) {
         map.getSource('zones').setData(geojson)
         return
       }
 
-      map.addSource('zones', { type: 'geojson', data: geojson })
+      // promoteId lets us use feature-state (hover) keyed by zone name
+      map.addSource('zones', { type: 'geojson', data: geojson, promoteId: 'name' })
 
       map.addLayer({
         id:     'zone-fill',
         type:   'fill',
         source: 'zones',
         paint:  {
-          'fill-color': [
-            'match', ['get', 'status'],
-            'go',      STATUS_FILL.go,
-            'caution', STATUS_FILL.caution,
-            'blocked', STATUS_FILL.blocked,
-            STATUS_FILL.unknown,
+          'fill-color':   colorExpr,
+          'fill-opacity': [
+            'case', ['boolean', ['feature-state', 'hover'], false],
+            0.50,   // hovered
+            0.20,   // base
           ],
-          'fill-opacity': 1,
         },
       })
 
@@ -311,16 +313,17 @@ export default function MapView() {
         type:   'line',
         source: 'zones',
         paint:  {
-          'line-color': [
-            'match', ['get', 'status'],
-            'go',      STATUS_LINE.go,
-            'caution', STATUS_LINE.caution,
-            'blocked', STATUS_LINE.blocked,
-            STATUS_LINE.unknown,
+          'line-color':   colorExpr,
+          'line-width': [
+            'case', ['boolean', ['feature-state', 'hover'], false],
+            3.5,    // hovered
+            1.8,    // base
           ],
-          'line-width':   1.5,
-          'line-opacity': 0.6,
-          'line-dasharray': [4, 3],
+          'line-opacity': [
+            'case', ['boolean', ['feature-state', 'hover'], false],
+            1.0,    // hovered
+            0.75,   // base
+          ],
         },
       })
 
@@ -330,7 +333,7 @@ export default function MapView() {
         source:      'zones',
         layout: {
           'text-field':           ['concat', ['get', 'name'], '\n', ['get', 'score']],
-          'text-size':            10,
+          'text-size':            11,
           'text-font':            ['DIN Offc Pro Medium', 'Arial Unicode MS Regular'],
           'text-justify':         'center',
           'text-anchor':          'center',
@@ -339,18 +342,35 @@ export default function MapView() {
         paint: {
           'text-color':        '#E8EFF8',
           'text-halo-color':   '#0F1621',
-          'text-halo-width':   1.5,
-          'text-opacity':      0.85,
+          'text-halo-width':   2,
+          'text-opacity':      0.9,
         },
         minzoom: 8,
+      })
+
+      map.on('mousemove', 'zone-fill', (e) => {
+        if (e.features.length > 0) {
+          if (hoveredZoneId !== null) {
+            map.setFeatureState({ source: 'zones', id: hoveredZoneId }, { hover: false })
+          }
+          hoveredZoneId = e.features[0].id
+          map.setFeatureState({ source: 'zones', id: hoveredZoneId }, { hover: true })
+          map.getCanvas().style.cursor = 'pointer'
+        }
+      })
+
+      map.on('mouseleave', 'zone-fill', () => {
+        if (hoveredZoneId !== null) {
+          map.setFeatureState({ source: 'zones', id: hoveredZoneId }, { hover: false })
+        }
+        hoveredZoneId = null
+        map.getCanvas().style.cursor = ''
       })
 
       map.on('click', 'zone-fill', (e) => {
         const props = e.features[0]?.properties ?? {}
         const scoreStr = props.score != null ? `Score ${props.score}` : 'No data'
-        const statusColor = {
-          go: '#4AC584', caution: '#FBbf24', blocked: '#EF4444',
-        }[props.status] ?? '#8899AA'
+        const statusColor = STATUS_COLOR[props.status] ?? STATUS_COLOR.unknown
         new mapboxgl.Popup({ closeButton: false })
           .setLngLat(e.lngLat)
           .setHTML(`
@@ -361,8 +381,6 @@ export default function MapView() {
           `)
           .addTo(map)
       })
-      map.on('mouseenter', 'zone-fill', () => { map.getCanvas().style.cursor = 'pointer' })
-      map.on('mouseleave', 'zone-fill', () => { map.getCanvas().style.cursor = '' })
     }
 
     if (mapLoaded.current) {

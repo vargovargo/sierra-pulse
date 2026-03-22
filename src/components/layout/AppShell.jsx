@@ -91,7 +91,7 @@ export default function AppShell({ children }) {
         height: 28,
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center',
+        justifyContent: 'flex-start',
         flexShrink: 0,
       }}>
         <PermitReleaseNotice />

@@ -114,7 +114,7 @@ export default function PulseStatusPage() {
         {!loading && windows.length > 0 && (
           <>
             <SummaryLine windows={windows} />
-            <div style={{
+            <div data-tour="zone-cards" style={{
               display:             'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
               gap:                 12,

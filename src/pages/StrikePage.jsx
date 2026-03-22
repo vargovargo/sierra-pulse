@@ -46,7 +46,7 @@ export default function StrikePage() {
       </div>
 
       {/* Scoring legend */}
-      <div style={{
+      <div data-tour="strike-cards" style={{
         background:   'var(--c-surface)',
         border:       '1px solid var(--c-border)',
         borderRadius: 8,
