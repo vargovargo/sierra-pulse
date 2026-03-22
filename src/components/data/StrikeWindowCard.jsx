@@ -180,7 +180,9 @@ function TrailheadPanel({ zone }) {
                       <div
                         key={d.date}
                         title={`${d.date}: ${d.available} of ${d.quota} available`}
+                        onClick={e => { e.stopPropagation(); window.open('https://www.recreation.gov/permits/233262', '_blank') }}
                         style={{
+                          cursor: 'pointer',
                           width:      38,
                           padding:    '5px 2px 4px',
                           borderRadius: 4,
@@ -198,7 +200,7 @@ function TrailheadPanel({ zone }) {
                           fontWeight: 600,
                           fontSize:   11,
                         }}>
-                          {avail ? d.available : '✕'}
+                          {avail ? (d.available > 99 ? '99+' : d.available) : '✕'}
                         </div>
                       </div>
                     )
