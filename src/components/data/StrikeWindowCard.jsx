@@ -176,6 +176,7 @@ function TrailheadPanel({ zone }) {
                   {monthDates.map(d => {
                     const day   = +d.date.slice(8)
                     const avail = d.available > 0
+                    const dow   = new Date(d.date + 'T12:00:00').toLocaleString('en-US', { weekday: 'short' })
                     return (
                       <div
                         key={d.date}
@@ -194,6 +195,7 @@ function TrailheadPanel({ zone }) {
                           lineHeight: 1.3,
                         }}
                       >
+                        <div style={{ color: 'var(--c-text-dim)', fontSize: 9 }}>{dow}</div>
                         <div style={{ color: 'var(--c-text-dim)' }}>{day}</div>
                         <div style={{
                           color:      avail ? 'var(--c-go)' : 'var(--c-stop)',
