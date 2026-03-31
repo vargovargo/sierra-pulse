@@ -34,10 +34,11 @@ export const ZONES = [
  * Coordinates sourced from topo maps / Recreation.gov.
  */
 export const TRAILHEADS = [
-  { id: '456', name: 'Piute Pass',               zone: 'North Lake / Piute Pass',        lat: 37.2340, lon: -118.6000 },
-  { id: '492', name: 'Lamarck Lakes',             zone: 'North Lake / Piute Pass',        lat: 37.2248, lon: -118.5972 },
-  { id: '459', name: 'Bishop Pass',               zone: 'South Lake / Bishop Pass',       lat: 37.1678, lon: -118.5724 },
-  { id: '192', name: 'Lake Sabrina',              zone: 'Lake Sabrina',                   lat: 37.2198, lon: -118.6098 },
+  { id: '456', name: 'Piute Pass',               zone: 'North Lake / Piute Pass',        lat: 37.2266667, lon: -118.6277778 },
+  { id: '497', name: 'Lamarck Lakes',             zone: 'North Lake / Piute Pass',        lat: 37.2264722, lon: -118.6273333 },
+  { id: '459', name: 'Bishop Pass',               zone: 'South Lake / Bishop Pass',       lat: 37.1685278, lon: -118.5661111 },
+  { id: '482', name: 'Sabrina Lake',              zone: 'Lake Sabrina',                   lat: 37.2133333, lon: -118.6091667 },
+  { id: '484', name: 'George Lake',               zone: 'Lake Sabrina',                   lat: 37.2111111, lon: -118.6093333 },
   { id: '461', name: 'Big Pine Creek South Fork', zone: 'Big Pine Creek',                 lat: 37.1368, lon: -118.4390 },
   { id: '495', name: 'Big Pine Creek North Fork', zone: 'Big Pine Creek',                 lat: 37.1312, lon: -118.4391 },
   { id: '481', name: 'Pine Creek',                zone: 'Pine Creek',                     lat: 37.3845, lon: -118.7047 },

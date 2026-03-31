@@ -13,13 +13,14 @@ export interface Division {
 export const DIVISIONS: Division[] = [
   // North Lake area
   { id: '456', name: 'Piute Pass',    zone: 'North Lake / Piute Pass' },
-  { id: '492', name: 'Lamarck Lakes', zone: 'North Lake / Piute Pass' },
+  { id: '497', name: 'Lamarck Lakes', zone: 'North Lake / Piute Pass' },
 
   // South Lake area
   { id: '459', name: 'Bishop Pass',   zone: 'South Lake / Bishop Pass' },
 
   // Lake Sabrina
-  { id: '192', name: 'Lake Sabrina',  zone: 'Lake Sabrina' },
+  { id: '482', name: 'Sabrina Lake',  zone: 'Lake Sabrina' },
+  { id: '484', name: 'George Lake',   zone: 'Lake Sabrina' },
 
   // Big Pine Creek
   { id: '461', name: 'Big Pine Creek South Fork', zone: 'Big Pine Creek' },

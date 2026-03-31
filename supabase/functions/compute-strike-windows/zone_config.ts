@@ -20,14 +20,14 @@ export const ZONE_CONFIGS: ZoneConfig[] = [
   {
     name:            'North Lake / Piute Pass',
     cdec_source_ids: ['SLK', 'LON', 'GRZ'],
-    permit_div_ids:  ['456', '492'],
+    permit_div_ids:  ['456', '497'],
     aqi_source_id:   'BISHOP',
     bounds:          [37.20, -118.72, 37.35, -118.50],
   },
   {
     name:            'Lake Sabrina',
     cdec_source_ids: ['SLK', 'LON', 'GRZ'],
-    permit_div_ids:  ['192'],
+    permit_div_ids:  ['482', '484'],
     aqi_source_id:   'BISHOP',
     bounds:          [37.18, -118.65, 37.26, -118.52],
   },
