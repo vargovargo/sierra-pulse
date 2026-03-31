@@ -89,11 +89,14 @@ export default function HistoryPage() {
 
   useEffect(() => {
     async function load() {
-      // Fetch all (station_id, parameter) pairs that have historical normals
+      // Fetch all (station_id, parameter) pairs that have historical normals.
+      // Must set a high limit — default PostgREST cap is 1000 rows, and each
+      // station/parameter pair has 365 rows (only ~2 pairs fit in the default limit).
       const { data: normalRows } = await supabase
         .from('historical_normals')
         .select('station_id, parameter')
         .order('station_id')
+        .limit(10000)
 
       if (!normalRows?.length) { setLoading(false); return }
 
