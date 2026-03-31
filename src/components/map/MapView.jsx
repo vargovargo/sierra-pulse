@@ -181,6 +181,7 @@ export default function MapView() {
       el.appendChild(inner)
       el.addEventListener('mouseenter', () => { inner.style.transform = 'scale(1.2)' })
       el.addEventListener('mouseleave', () => { inner.style.transform = 'scale(1)' })
+      el.addEventListener('click', e => e.stopPropagation())
 
       const popup = new mapboxgl.Popup({
         offset: 16,
@@ -429,6 +430,7 @@ export default function MapView() {
       inner.textContent = 'TH'
       inner.title = th.name
       el.appendChild(inner)
+      el.addEventListener('click', e => e.stopPropagation())
 
       const popup = new mapboxgl.Popup({ offset: 14, closeButton: false })
         .setHTML(`
@@ -473,6 +475,7 @@ export default function MapView() {
       `
       inner.textContent = '!'
       el.appendChild(inner)
+      el.addEventListener('click', e => e.stopPropagation())
 
       const popup = new mapboxgl.Popup({ offset: 14, closeButton: false })
         .setHTML(`
