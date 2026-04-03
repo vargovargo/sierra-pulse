@@ -41,8 +41,8 @@ supabase/
     ingest-aqi/
     ingest-fire/
     ingest-roads/
-    ingest-strava/   zones.ts (12 zones, Bishop 6 active), client.ts, index.ts
-    ingest-permits/  divisions.ts (Inyo NF facility 233262, 8 Bishop divisions), index.ts
+    ingest-strava/   zones.ts (8 zones active: 6 Bishop + Twin Lakes/Matterhorn + Saddlebag Lake), client.ts, index.ts
+    ingest-permits/  divisions.ts (multi-facility: Inyo NF 233262 + Hoover 445856, 15 divisions total), index.ts
   seed.sql      (48h synthetic obs — delete with fractional-second timestamp filter before prod)
 ```
 
@@ -164,7 +164,9 @@ Apply the migration and seed in **Supabase dashboard → SQL Editor**:
 2. Run `supabase/seed_historical.sql`
 
 The `daily_observations` view aggregates hourly → daily on the fly (no extra table).
-The `/history` route renders the envelope charts for GIN SWE (days 1–210) and Merced discharge (days 1–300).
+The `/history` route renders envelope charts for all stations that have historical normals (currently 10: GIN, BSH, RCK, TUM, DAN for SWE + Merced, Hetch Hetchy, Kings, Truckee, Blackwood for discharge).
+
+**PostgREST row cap gotcha**: `historical_normals` has 365 rows per station/parameter. Fetching all rows to deduplicate hits the 1000-row default cap. Fix: query with `.eq('day_of_year', 1)` to get exactly one row per pair, then fetch full data per-station in individual chart hooks.
 
 Until real ingest populates the `observations` table, the current-year line will be flat/absent — only the historical envelope bands will show.
 
@@ -183,9 +185,10 @@ Notes:
 - Strava segments matched to zones by bounding-box geography (no zone stored in metadata)
 - Traffic signal uses **weekly effort delta** (not cumulative total) via `segment_weekly_efforts` view
 - Traffic thresholds: < 10/week = low, 10–30 = moderate, > 30 = high
-- AQI uses Bishop station for all 6 Bishop-area zones
+- AQI uses Bishop station for Eastern Sierra zones, Mammoth station for Hoover Wilderness zones
 - SWE: first CDEC source_id in zone config with data wins; falls back to next in list
-- Off-season permits (before May 1): `permits_avail = null` → permits score = 20 (neutral)
+- Off-season permits (before May 1 for Inyo, before June 15 for Hoover): `permits_avail = null` → permits score = 20 (neutral)
+- Strike page partitioned by area (Eastern Sierra / Hoover Wilderness) — mapping is frontend-only in `ZONE_AREA` in `StrikePage.jsx`, no DB column needed
 
 ### segment_weekly_efforts view — PENDING MIGRATION
 `supabase/migrations/20260316000001_segment_weekly_efforts.sql` adds the view. **Not yet applied.**
@@ -196,14 +199,12 @@ View columns: `weekly_efforts`, `last_seen`, `season_opener`, `last_active`, `se
 - `season_closer` — last active date, only exposed after 14+ days of silence (trail gone quiet)
 - Both shown in map popup for trail_segment markers
 
-### CDEC stations — confirmed live (Eastern Sierra)
-Verified by running ingest and checking DB. 17 live stations total.
-- `BSH` (Bishop Pass, 11,200ft) ✅ — added this session, primary for South Lake / Bishop Pass zone
-- `RCK` (Rock Creek Lakes, 10,000ft) ✅ — added this session, primary for Rock Creek + Pine Creek zones
-- `PPS`, `BSP`, `BGP` ❌ — tried, don't exist in CDEC
-- `ROC` ❌ — was in original list, never returned data, removed
-- North Lake / Lake Sabrina / Big Pine Creek zones fall back to `SLK` / `GRZ` — acceptable proxies
-- More Eastern Sierra station IDs to find: look up CDEC station search at cdec.water.ca.gov
+### CDEC stations — confirmed live
+17+ live stations. Key stations per area:
+- **Eastern Sierra (Bishop)**: `BSH` (Bishop Pass, 11,200ft), `RCK` (Rock Creek Lakes, 10,000ft) confirmed primary; `SLK`/`GRZ` proxies for North Lake / Sabrina / Big Pine
+- **Hoover / Tioga**: `TUM` (Tuolumne Meadows, 8,619ft), `DAN` (Dana Meadows, ~9,600ft) — proxies for Twin Lakes/Matterhorn + Saddlebag zones
+- `PPS`, `BSP`, `BGP`, `ROC` ❌ — don't exist or never returned data
+- Lee Vining Creek has no real-time USGS IV gauge (10287900 and 10288000 both return empty timeSeries) — omitted from ingest
 
 ### Cron jobs — SQL command format
 All cron jobs must use named params and jsonb casting or they silently fail:
@@ -227,16 +228,21 @@ Full schedule:
 | `strike-windows` | `0 */2 * * *` | `compute-strike-windows` |
 
 ### Strava — rate limit
-Strava API limit: 100 req/15min. With 6 Bishop-area zones: 6 explore + up to 60 detail fetches = safe.
+Strava API limit: 100 req/15min. With 8 active zones: 8 explore + up to 80 detail fetches = near limit.
 Do not test back-to-back — wait 15min between manual invocations. Daily cron never hits the limit.
-Zones scoped to Bishop area only. Expand by uncommenting zones in `ingest-strava/zones.ts`.
+Active zones: 6 Bishop + Twin Lakes/Matterhorn + Saddlebag Lake. More zones commented out in `ingest-strava/zones.ts`.
+Strava OAuth refresh tokens expire after ~6 months of inactivity. Re-authorize at strava.com/settings/api if token fails (HTTP 401 on refresh).
+Client ID: 209425. Re-auth flow: `/oauth/authorize` → exchange code → `supabase secrets set STRAVA_REFRESH_TOKEN=...` + `STRAVA_CLIENT_SECRET=...`.
 
-### Recreation.gov permits — seasonal
-Inyo NF wilderness permit (facility `233262`) is disabled in PermitService outside of permit season.
-Permit season opens ~May 1. `ingest-permits` handles this gracefully (WARN, no crash).
-Division IDs for Bishop trailheads are in `ingest-permits/divisions.ts` — correct and verified.
-Availability endpoint: `GET https://www.recreation.gov/api/permits/{id}/availability/month?start_date=YYYY-MM-01T00:00:00.000Z`
-Requires `User-Agent` header and `apikey` header. Date must be first of month (ISO timestamp).
+### Recreation.gov permits — multi-facility
+`ingest-permits` now handles multiple facilities via `FACILITIES` array in `divisions.ts`.
+- **Inyo NF** facility `233262`: 9 divisions, permit season ~May 1 – Oct 31
+- **Hoover Wilderness / Humboldt-Toiyabe NF** facility `445856`: 6 divisions (8560–8565), permit season June 15 – Oct 15, quota-based, $8/person + $6 reservation fee
+
+Division IDs sourced from `https://www.recreation.gov/api/permitcontent/{facilityId}` (returns GeoJSON with coordinates).
+Availability endpoint: `GET https://www.recreation.gov/api/permitinyo/{facilityId}/availabilityv2?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD&commercial_acct=false`
+— note `permitinyo` path works for both Inyo and Hoover facilities despite the name.
+`TRAILHEADS` in `src/lib/zones.js` has coordinates for all 15 divisions. `recGovUrl(divId)` returns the correct facility URL per trailhead.
 
 ### Map — Strava trail segment markers
 `MapView.jsx` already has `trail_segment` marker style (green ▲) and `effort_count` param wired.
@@ -247,6 +253,9 @@ Markers will appear after `ingest-strava` populates stations with `type='trail_s
 - `src/components/map/MapView.jsx` — Mapbox GL JS, 3D terrain, HTML markers
 - NPS alert markers only appear if `alerts.lat` / `alerts.lon` are populated — current seed has no alert coordinates, so alert markers won't show until real NPS ingest runs
 - Mapbox marker hover: scale transform must go on inner child div, not the outer `el` (outer el is managed by Mapbox for positioning)
+- Snow/streamflow popups show an inline SVG sparkline (30-yr median + p25–p75 band + current year). Data fetched lazily on popup `open` event via `popup.once('open', async () => {...})` — no upfront load cost.
+- History page `↗ map` button navigates to `/map?lat=&lng=&zoom=12` — MapView reads params and calls `flyTo` after the `load` event.
+- Dashboard zone cards navigate to `/strike#encodedZoneName` — StrikePage scrolls to the matching card via `scrollIntoView` after windows load.
 
 ## Known gotchas
 
