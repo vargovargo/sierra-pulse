@@ -51,7 +51,7 @@ function EnvelopeSection({ station, parameter }) {
         </span>
         {station.lat && station.lon && (
           <button
-            onClick={() => navigate('/map')}
+            onClick={() => navigate(`/map?lat=${station.lat}&lng=${station.lon}&zoom=12`)}
             style={{
               background:  'none',
               border:      '1px solid var(--c-border)',
@@ -89,24 +89,17 @@ export default function HistoryPage() {
 
   useEffect(() => {
     async function load() {
-      // Fetch all (station_id, parameter) pairs that have historical normals.
-      // Must set a high limit — default PostgREST cap is 1000 rows, and each
-      // station/parameter pair has 365 rows (only ~2 pairs fit in the default limit).
+      // Fetch one row per (station_id, parameter) pair by filtering day_of_year = 1.
+      // Avoids pulling all 365 rows per pair, which would exceed the PostgREST row cap.
       const { data: normalRows } = await supabase
         .from('historical_normals')
         .select('station_id, parameter')
+        .eq('day_of_year', 1)
         .order('station_id')
-        .limit(10000)
 
       if (!normalRows?.length) { setLoading(false); return }
 
-      // Deduplicate (station_id, parameter) pairs
-      const seen = new Set()
-      const pairs = []
-      for (const r of normalRows) {
-        const key = `${r.station_id}:${r.parameter}`
-        if (!seen.has(key)) { seen.add(key); pairs.push(r) }
-      }
+      const pairs = normalRows
 
       const stationIds = [...new Set(pairs.map(p => p.station_id))]
 

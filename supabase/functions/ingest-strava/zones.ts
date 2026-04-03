@@ -17,9 +17,9 @@ export const ZONES: Zone[] = [
   { name: 'Pine Creek',                       bounds: [37.32, -118.78, 37.45, -118.60] },
   { name: 'Rock Creek / Little Lakes Valley', bounds: [37.40, -118.78, 37.55, -118.58] },
 
-  // --- Expand later ---
-  // { name: 'Twin Lakes / Matterhorn',       bounds: [38.15, -119.42, 38.30, -119.28] },
-  // { name: 'Saddlebag Lake',                bounds: [37.93, -119.32, 38.02, -119.22] },
+  // --- Hoover Wilderness / Tioga area ---
+  { name: 'Twin Lakes / Matterhorn',         bounds: [38.15, -119.42, 38.30, -119.28] },
+  { name: 'Saddlebag Lake',                  bounds: [37.93, -119.32, 38.02, -119.22] },
   // { name: 'Kearsarge Pass / Onion Valley', bounds: [36.73, -118.42, 36.85, -118.25] },
   // { name: 'Shepherd Pass',                 bounds: [36.63, -118.35, 36.75, -118.20] },
   // { name: 'Whitney Portal',                bounds: [36.55, -118.32, 36.67, -118.18] },

@@ -15,7 +15,7 @@
 
 import { corsHeaders, handleCors } from '../_shared/cors.ts'
 import { getSupabaseAdmin }        from '../_shared/supabaseAdmin.ts'
-import { INYO_FACILITY_ID, DIVISIONS } from './divisions.ts'
+import { FACILITIES } from './divisions.ts'
 
 const RECGOV_BASE = 'https://www.recreation.gov/api/permitinyo'
 
@@ -48,7 +48,7 @@ async function fetchAvailability(
   return json?.payload ?? {}
 }
 
-function buildPermitRows(payload: AvailabilityPayload) {
+function buildPermitRows(payload: AvailabilityPayload, divisions: typeof FACILITIES[0]['divisions'], forest: string) {
   const rows: Array<{
     trailhead:    string
     trailhead_id: string
@@ -60,7 +60,7 @@ function buildPermitRows(payload: AvailabilityPayload) {
   }> = []
 
   for (const [dateStr, divMap] of Object.entries(payload)) {
-    for (const div of DIVISIONS) {
+    for (const div of divisions) {
       const slot = divMap?.[div.id]
       if (!slot) continue
       const { total, remaining } = slot.quota_usage_by_member_daily
@@ -71,7 +71,7 @@ function buildPermitRows(payload: AvailabilityPayload) {
         quota:        total,
         available:    remaining,
         permit_type:  'overnight',
-        forest:       'Inyo National Forest',
+        forest,
       })
     }
   }
@@ -101,35 +101,36 @@ Deno.serve(async (req: Request) => {
 
   const supabase = getSupabaseAdmin()
 
-  // --- Upsert stations (one per division, with zone in metadata) ---
-  const stationRows = DIVISIONS.map(d => ({
-    source:    'recgov',
-    source_id: `${INYO_FACILITY_ID}-${d.id}`,
-    name:      d.name,
-    type:      'permit',
-    metadata:  { zone: d.zone },
-  }))
-
-  const { error: stationErr } = await supabase
-    .from('stations')
-    .upsert(stationRows, { onConflict: 'source,source_id', ignoreDuplicates: false })
-
-  if (stationErr) {
-    results.errors.push(`Station upsert: ${stationErr.message}`)
-  } else {
-    results.stations_upserted = stationRows.length
-  }
-
-  // --- Fetch month by month, current through +6 months ---
+  // --- Upsert stations and fetch availability for all facilities ---
   const allPermitRows: ReturnType<typeof buildPermitRows> = []
 
-  for (let m = 0; m <= 6; m++) {
-    const { start, end } = monthRange(m)
-    try {
-      const payload = await fetchAvailability(INYO_FACILITY_ID, start, end)
-      allPermitRows.push(...buildPermitRows(payload))
-    } catch (err) {
-      results.errors.push(`Fetch ${start.slice(0, 7)}: ${(err as Error).message}`)
+  for (const facility of FACILITIES) {
+    const stationRows = facility.divisions.map(d => ({
+      source:    'recgov',
+      source_id: `${facility.id}-${d.id}`,
+      name:      d.name,
+      type:      'permit',
+      metadata:  { zone: d.zone },
+    }))
+
+    const { error: stationErr } = await supabase
+      .from('stations')
+      .upsert(stationRows, { onConflict: 'source,source_id', ignoreDuplicates: false })
+
+    if (stationErr) {
+      results.errors.push(`Station upsert (${facility.id}): ${stationErr.message}`)
+    } else {
+      results.stations_upserted += stationRows.length
+    }
+
+    for (let m = 0; m <= 6; m++) {
+      const { start, end } = monthRange(m)
+      try {
+        const payload = await fetchAvailability(facility.id, start, end)
+        allPermitRows.push(...buildPermitRows(payload, facility.divisions, facility.forest))
+      } catch (err) {
+        results.errors.push(`Fetch ${facility.id} ${start.slice(0, 7)}: ${(err as Error).message}`)
+      }
     }
   }
 

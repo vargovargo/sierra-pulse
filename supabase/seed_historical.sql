@@ -329,3 +329,80 @@ on conflict (station_id, parameter, day_of_year) do update set
   p10 = excluded.p10, p25 = excluded.p25, p50 = excluded.p50,
   p75 = excluded.p75, p90 = excluded.p90,
   record_min = excluded.record_min, record_max = excluded.record_max;
+
+-- ---------------------------------------------------------------------------
+-- TUM (Tuolumne Meadows, ~8,600 ft) — SWE (inches)
+-- West-central Sierra; wetter aspect than Eastern Sierra stations.
+-- Peak ~April 5 (day 95), median ~44"; zero mid-July–mid-October.
+-- ---------------------------------------------------------------------------
+with tum as (
+  select id from stations where source = 'cdec' and source_id = 'TUM'
+),
+days as (select generate_series(1, 365) as doy),
+curve as (
+  select doy,
+    greatest(0, case
+      when doy >= 278 then round((16.0 * (doy - 278)::numeric / 87), 2)
+      when doy <= 95  then round((16.0 + 28.0 * doy::numeric / 95), 2)
+      when doy <= 196 then round((44.0 * (1.0 - (doy - 95)::numeric / 101)), 2)
+      else 0
+    end) as p50_swe
+  from days
+)
+insert into historical_normals
+  (station_id, parameter, day_of_year, p10, p25, p50, p75, p90, record_min, record_max, period_start, period_end)
+select
+  tum.id, 'swe', c.doy,
+  round(greatest(0, c.p50_swe * 0.52)::numeric, 2) as p10,
+  round(greatest(0, c.p50_swe * 0.74)::numeric, 2) as p25,
+  c.p50_swe                                         as p50,
+  round(greatest(0, c.p50_swe * 1.24)::numeric, 2) as p75,
+  round(greatest(0, c.p50_swe * 1.50)::numeric, 2) as p90,
+  round(greatest(0, c.p50_swe * 0.28)::numeric, 2) as record_min,
+  round(greatest(0, c.p50_swe * 1.85)::numeric, 2) as record_max,
+  1991, 2020
+from curve c cross join tum
+on conflict (station_id, parameter, day_of_year) do update set
+  p10 = excluded.p10, p25 = excluded.p25, p50 = excluded.p50,
+  p75 = excluded.p75, p90 = excluded.p90,
+  record_min = excluded.record_min, record_max = excluded.record_max;
+
+-- ---------------------------------------------------------------------------
+-- DAN (Dana Meadows, ~9,600 ft) — SWE (inches)
+-- Eastern aspect at Tioga Pass; less precip than TUM, similar to BSH timing.
+-- Peak ~April 5 (day 95), median ~28"; zero late July–mid-October.
+-- ---------------------------------------------------------------------------
+with dan as (
+  select id from stations where source = 'cdec' and source_id = 'DAN'
+),
+days as (select generate_series(1, 365) as doy),
+curve as (
+  select doy,
+    greatest(0, case
+      when doy >= 280 then round((10.0 * (doy - 280)::numeric / 85), 2)
+      when doy <= 95  then round((10.0 + 18.0 * doy::numeric / 95), 2)
+      when doy <= 188 then round((28.0 * (1.0 - (doy - 95)::numeric / 93)), 2)
+      else 0
+    end) as p50_swe
+  from days
+)
+insert into historical_normals
+  (station_id, parameter, day_of_year, p10, p25, p50, p75, p90, record_min, record_max, period_start, period_end)
+select
+  dan.id, 'swe', c.doy,
+  round(greatest(0, c.p50_swe * 0.50)::numeric, 2) as p10,
+  round(greatest(0, c.p50_swe * 0.72)::numeric, 2) as p25,
+  c.p50_swe                                         as p50,
+  round(greatest(0, c.p50_swe * 1.26)::numeric, 2) as p75,
+  round(greatest(0, c.p50_swe * 1.52)::numeric, 2) as p90,
+  round(greatest(0, c.p50_swe * 0.27)::numeric, 2) as record_min,
+  round(greatest(0, c.p50_swe * 1.88)::numeric, 2) as record_max,
+  1991, 2020
+from curve c cross join dan
+on conflict (station_id, parameter, day_of_year) do update set
+  p10 = excluded.p10, p25 = excluded.p25, p50 = excluded.p50,
+  p75 = excluded.p75, p90 = excluded.p90,
+  record_min = excluded.record_min, record_max = excluded.record_max;
+
+-- Note: Lee Vining Creek (10287900, 10288000) has no real-time IV monitoring —
+-- omitted from ingest. DAN (Dana Meadows SWE) is the snow proxy for this zone.

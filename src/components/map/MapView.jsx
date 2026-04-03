@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { useStations } from '../../hooks/useStations.js'
@@ -97,6 +97,7 @@ function buildPopupHtml(station, obs, weeklyEfforts) {
 
 export default function MapView() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const mapContainer = useRef(null)
   const mapRef       = useRef(null)
   const mapLoaded    = useRef(false)
@@ -140,6 +141,13 @@ export default function MapView() {
       })
       mapRef.current.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 })
       mapLoaded.current = true
+
+      const lat  = parseFloat(searchParams.get('lat'))
+      const lng  = parseFloat(searchParams.get('lng'))
+      const zoom = parseFloat(searchParams.get('zoom')) || 12
+      if (!isNaN(lat) && !isNaN(lng)) {
+        mapRef.current.flyTo({ center: [lng, lat], zoom, duration: 1200 })
+      }
     })
 
     return () => {
