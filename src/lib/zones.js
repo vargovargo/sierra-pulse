@@ -27,6 +27,15 @@ export const ZONES = [
     name:   'Rock Creek / Little Lakes Valley',
     bounds: [37.40, -118.78, 37.55, -118.58],
   },
+  // Hoover Wilderness
+  {
+    name:   'Twin Lakes / Matterhorn',
+    bounds: [38.15, -119.42, 38.30, -119.28],
+  },
+  {
+    name:   'Saddlebag Lake',
+    bounds: [37.93, -119.32, 38.02, -119.22],
+  },
 ]
 
 /**

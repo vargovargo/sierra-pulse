@@ -496,14 +496,22 @@ export default function MapView() {
       inner.title = th.name
       el.appendChild(inner)
 
+      const forest = Number(th.id) >= 8000 ? 'Humboldt-Toiyabe NF' : 'Inyo NF'
       const popup = new mapboxgl.Popup({ offset: 14, closeButton: false })
         .setHTML(`
-          <div style="font-family:Inter,sans-serif;min-width:140px">
+          <div style="font-family:Inter,sans-serif;min-width:150px">
             <div style="font-weight:600;font-size:12px;color:#E8EFF8;margin-bottom:2px">${th.name}</div>
             <div style="font-size:11px;color:#8899AA">${th.zone}</div>
-            <div style="font-size:11px;color:#8899AA;margin-top:4px">Permit required · Inyo NF</div>
+            <div style="font-size:11px;color:#8899AA;margin-top:2px">Permit required · ${forest}</div>
+            <a data-strike-nav="${th.zone}" href="#" style="display:inline-block;margin-top:8px;font-size:11px;font-weight:600;color:#7AB8CC;text-decoration:none;border:1px solid #7AB8CC33;border-radius:4px;padding:3px 8px;font-family:Inter,sans-serif">View strike window →</a>
           </div>
         `)
+      popup.once('open', () => {
+        popup.getElement()?.addEventListener('click', (ev) => {
+          const zone = ev.target?.dataset?.strikeNav
+          if (zone) { ev.preventDefault(); popup.remove(); navigate('/strike#' + encodeURIComponent(zone)) }
+        })
+      })
 
       const marker = new mapboxgl.Marker({ element: el })
         .setLngLat([th.lon, th.lat])
