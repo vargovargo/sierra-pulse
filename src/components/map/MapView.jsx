@@ -10,6 +10,7 @@ import { useFirePerimeters } from '../../hooks/useFirePerimeters.js'
 import { useStrikeWindows } from '../../hooks/useStrikeWindows.js'
 import { buildZoneGeojson, TRAILHEADS } from '../../lib/zones.js'
 import { fmtValue, fmtRelativeTime } from '../../lib/formatters.js'
+import { supabase } from '../../lib/supabase.js'
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN
 
@@ -44,6 +45,34 @@ const PARAM_COLOR = {
   snow:       '#7AB8CC',
   streamflow: '#5B9BD5',
   weather:    '#E8B84A',
+}
+
+function buildSparklineSVG(normals, daily, color) {
+  if (!normals.length) return ''
+  const W = 180, H = 52
+  const ML = 2, MR = 2, MT = 4, MB = 4
+  const cW = W - ML - MR, cH = H - MT - MB
+
+  const maxVal = Math.max(...normals.map(n => n.p90).filter(v => v > 0), 0.001)
+
+  const px = doy => ML + ((doy - 1) / 364) * cW
+  const py = val  => MT + cH - Math.min((val / maxVal) * cH, cH)
+
+  const upper  = normals.map(n => `${px(n.day_of_year).toFixed(1)},${py(n.p75).toFixed(1)}`).join('L')
+  const lower  = [...normals].reverse().map(n => `${px(n.day_of_year).toFixed(1)},${py(n.p25).toFixed(1)}`).join('L')
+  const band   = `M${upper}L${lower}Z`
+  const median = normals.map((n, i) => `${i === 0 ? 'M' : 'L'}${px(n.day_of_year).toFixed(1)},${py(n.p50).toFixed(1)}`).join('')
+  const pts    = (daily ?? []).filter(d => d.value_avg != null)
+  const curr   = pts.map((d, i) => `${i === 0 ? 'M' : 'L'}${px(d.day_of_year).toFixed(1)},${py(d.value_avg).toFixed(1)}`).join('')
+
+  return `
+    <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;margin-top:10px">
+      <path d="${band}" fill="${color}" opacity="0.15"/>
+      <path d="${median}" fill="none" stroke="${color}" stroke-width="1" stroke-dasharray="3,2" opacity="0.55"/>
+      ${curr ? `<path d="${curr}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
+    </svg>
+    <div style="font-size:10px;color:#8899AA;text-align:center;margin-top:2px">vs. 30-yr median · bands p25–p75</div>
+  `
 }
 
 function buildPopupHtml(station, obs, weeklyEfforts) {
@@ -195,6 +224,33 @@ export default function MapView() {
         closeButton: false,
         className: 'sierra-popup',
       }).setHTML(buildPopupHtml(station, obsLatest, weeklyEfforts))
+
+      if (station.type === 'snow' || station.type === 'streamflow') {
+        const param = PRIMARY_PARAM[station.type]
+        const color = PARAM_COLOR[station.type]
+        popup.once('open', async () => {
+          const yearStart = `${new Date().getFullYear()}-01-01`
+          const [{ data: normals }, { data: daily }] = await Promise.all([
+            supabase
+              .from('historical_normals')
+              .select('day_of_year, p25, p50, p75, p90')
+              .eq('station_id', station.id)
+              .eq('parameter', param)
+              .order('day_of_year'),
+            supabase
+              .from('daily_observations')
+              .select('day_of_year, value_avg')
+              .eq('station_id', station.id)
+              .eq('parameter', param)
+              .gte('obs_date', yearStart)
+              .order('day_of_year'),
+          ])
+          const svg = buildSparklineSVG(normals ?? [], daily ?? [], color)
+          if (!svg) return
+          const sparkWrap = `<div style="border-top:1px solid rgba(255,255,255,0.08);padding-top:6px;margin-top:8px">${svg}</div>`
+          popup.setHTML(buildPopupHtml(station, obsLatest, weeklyEfforts) + sparkWrap)
+        })
+      }
 
       const marker = new mapboxgl.Marker({ element: el })
         .setLngLat([station.lon, station.lat])

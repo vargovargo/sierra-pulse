@@ -7,6 +7,7 @@
 
 import { useState, useMemo } from 'react'
 import { usePermitStations } from '../../hooks/usePermitStations.js'
+import { recGovUrl } from '../../lib/zones.js'
 
 const STATUS_CONFIG = {
   go:      { color: 'var(--c-go)',   label: 'GO',      bg: 'rgba(74,197,132,0.10)' },
@@ -181,7 +182,7 @@ function TrailheadPanel({ zone }) {
                       <div
                         key={d.date}
                         title={`${d.date}: ${d.available} of ${d.quota} available`}
-                        onClick={e => { e.stopPropagation(); window.open('https://www.recreation.gov/permits/233262', '_blank') }}
+                        onClick={e => { e.stopPropagation(); window.open(recGovUrl(t.trailhead_id), '_blank') }}
                         style={{
                           cursor: 'pointer',
                           width:      38,

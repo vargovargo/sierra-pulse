@@ -1,39 +1,117 @@
+import { useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useStrikeWindows } from '../hooks/useStrikeWindows.js'
 import StrikeWindowCard    from '../components/data/StrikeWindowCard.jsx'
 import LoadingSpinner      from '../components/shared/LoadingSpinner.jsx'
 import ErrorBoundary       from '../components/shared/ErrorBoundary.jsx'
 
-const STATUS_SUMMARY = {
-  go:      { color: 'var(--c-go)',   text: 'Conditions aligned. Window is open.' },
-  caution: { color: 'var(--c-warn)', text: 'Mixed signals. Verify before committing.' },
-  blocked: { color: 'var(--c-stop)', text: 'Conditions not met.' },
+// Zone → area mapping — derived from zone_config.ts, no DB column needed
+const ZONE_AREA = {
+  'North Lake / Piute Pass':        'Eastern Sierra',
+  'Lake Sabrina':                   'Eastern Sierra',
+  'South Lake / Bishop Pass':       'Eastern Sierra',
+  'Big Pine Creek':                 'Eastern Sierra',
+  'Pine Creek':                     'Eastern Sierra',
+  'Rock Creek / Little Lakes Valley': 'Eastern Sierra',
+  'Twin Lakes / Matterhorn':        'Hoover Wilderness',
+  'Saddlebag Lake':                 'Hoover Wilderness',
 }
 
-function SectionTitle({ children }) {
+const AREAS = ['Eastern Sierra', 'Hoover Wilderness']
+
+function areaOf(w) {
+  return ZONE_AREA[w.zone] ?? 'Other'
+}
+
+function AreaTitle({ children }) {
   return (
     <h2 style={{
-      fontSize: 12,
-      fontFamily: 'var(--c-font-mono)',
-      textTransform: 'uppercase',
-      letterSpacing: '0.08em',
-      color: 'var(--c-text-dim)',
-      marginBottom: 12,
-      marginTop: 32,
-      paddingBottom: 8,
-      borderBottom: '1px solid var(--c-border)',
+      fontSize: 15,
+      fontWeight: 700,
+      color: 'var(--c-text)',
+      marginBottom: 4,
+      marginTop: 40,
     }}>
       {children}
     </h2>
   )
 }
 
+function SectionTitle({ children }) {
+  return (
+    <h3 style={{
+      fontSize: 11,
+      fontFamily: 'var(--c-font-mono)',
+      textTransform: 'uppercase',
+      letterSpacing: '0.08em',
+      color: 'var(--c-text-dim)',
+      marginBottom: 10,
+      marginTop: 20,
+      paddingBottom: 6,
+      borderBottom: '1px solid var(--c-border)',
+    }}>
+      {children}
+    </h3>
+  )
+}
+
+function card(w) {
+  return (
+    <div key={w.zone} id={encodeURIComponent(w.zone)}>
+      <StrikeWindowCard window={w} />
+    </div>
+  )
+}
+
+function AreaSection({ area, windows }) {
+  const zones   = windows.filter(w => areaOf(w) === area)
+  const go      = zones.filter(w => w.window_status === 'go')
+  const caution = zones.filter(w => w.window_status === 'caution')
+  const blocked = zones.filter(w => w.window_status === 'blocked')
+  const unknown = zones.filter(w => w.window_status === 'unknown')
+
+  if (!zones.length) return null
+
+  return (
+    <div>
+      <AreaTitle>{area}</AreaTitle>
+      {go.length > 0 && (
+        <>
+          <SectionTitle>Open Windows</SectionTitle>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{go.map(card)}</div>
+        </>
+      )}
+      {caution.length > 0 && (
+        <>
+          <SectionTitle>Caution</SectionTitle>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{caution.map(card)}</div>
+        </>
+      )}
+      {blocked.length > 0 && (
+        <>
+          <SectionTitle>Blocked</SectionTitle>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{blocked.map(card)}</div>
+        </>
+      )}
+      {unknown.length > 0 && (
+        <>
+          <SectionTitle>Pending Data</SectionTitle>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{unknown.map(card)}</div>
+        </>
+      )}
+    </div>
+  )
+}
+
 export default function StrikePage() {
   const { windows, loading, error } = useStrikeWindows()
+  const location = useLocation()
 
-  const goZones      = windows.filter(w => w.window_status === 'go')
-  const cautionZones = windows.filter(w => w.window_status === 'caution')
-  const blockedZones = windows.filter(w => w.window_status === 'blocked')
-  const unknownZones = windows.filter(w => w.window_status === 'unknown')
+  useEffect(() => {
+    if (loading || !windows.length || !location.hash) return
+    const el = document.getElementById(location.hash.slice(1))
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [loading, windows.length, location.hash])
 
   return (
     <div style={{ maxWidth: 800 }}>
@@ -63,8 +141,6 @@ export default function StrikePage() {
         <span style={{ color: 'var(--c-warn)' }}>40–69 → CAUTION</span>
         <span style={{ color: 'var(--c-stop)' }}>0–39 / AQI &gt;150 → BLOCKED</span>
       </div>
-
-      {/* AQI note */}
       <p style={{ fontSize: 11, color: 'var(--c-text-dim)', marginBottom: 24 }}>
         AQI &gt; 150 blocks the window regardless of other signals. AQI 101–150 caps the score at 60.
       </p>
@@ -96,49 +172,9 @@ export default function StrikePage() {
           </div>
         )}
 
-        {goZones.length > 0 && (
-          <>
-            <SectionTitle>Open Windows</SectionTitle>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {goZones.map(w => (
-                <StrikeWindowCard key={w.zone} window={w} />
-              ))}
-            </div>
-          </>
-        )}
-
-        {cautionZones.length > 0 && (
-          <>
-            <SectionTitle>Caution</SectionTitle>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {cautionZones.map(w => (
-                <StrikeWindowCard key={w.zone} window={w} />
-              ))}
-            </div>
-          </>
-        )}
-
-        {blockedZones.length > 0 && (
-          <>
-            <SectionTitle>Blocked</SectionTitle>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {blockedZones.map(w => (
-                <StrikeWindowCard key={w.zone} window={w} />
-              ))}
-            </div>
-          </>
-        )}
-
-        {unknownZones.length > 0 && (
-          <>
-            <SectionTitle>Pending Data</SectionTitle>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {unknownZones.map(w => (
-                <StrikeWindowCard key={w.zone} window={w} />
-              ))}
-            </div>
-          </>
-        )}
+        {!loading && windows.length > 0 && AREAS.map(area => (
+          <AreaSection key={area} area={area} windows={windows} />
+        ))}
       </ErrorBoundary>
     </div>
   )

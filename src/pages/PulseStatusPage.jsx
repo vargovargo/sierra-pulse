@@ -123,7 +123,7 @@ export default function PulseStatusPage() {
                 <ZoneCard
                   key={w.zone}
                   window={w}
-                  onClick={() => navigate('/strike')}
+                  onClick={() => navigate('/strike#' + encodeURIComponent(w.zone))}
                 />
               ))}
             </div>

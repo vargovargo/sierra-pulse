@@ -42,8 +42,29 @@ export const TRAILHEADS = [
   { id: '461', name: 'Big Pine Creek South Fork', zone: 'Big Pine Creek',                 lat: 37.1368, lon: -118.4390 },
   { id: '495', name: 'Big Pine Creek North Fork', zone: 'Big Pine Creek',                 lat: 37.1312, lon: -118.4391 },
   { id: '481', name: 'Pine Creek',                zone: 'Pine Creek',                     lat: 37.3845, lon: -118.7047 },
-  { id: '451', name: 'Little Lakes Valley',       zone: 'Rock Creek / Little Lakes Valley', lat: 37.4352, lon: -118.7389 },
+  { id: '451', name: 'Little Lakes Valley',       zone: 'Rock Creek / Little Lakes Valley', lat: 37.4352,    lon: -118.7389   },
+  // Hoover Wilderness (facility 445856)
+  { id: '8560', name: 'Buckeye Creek',            zone: 'Twin Lakes / Matterhorn',          lat: 38.23475,   lon: -119.351145 },
+  { id: '8561', name: 'Robinson Creek',           zone: 'Twin Lakes / Matterhorn',          lat: 38.146963,  lon: -119.377661 },
+  { id: '8562', name: 'Little Slide Canyon',      zone: 'Twin Lakes / Matterhorn',          lat: 38.145511,  lon: -119.416796 },
+  { id: '8563', name: 'Horse Creek',              zone: 'Twin Lakes / Matterhorn',          lat: 38.145569,  lon: -119.378665 },
+  { id: '8564', name: 'Green Creek',              zone: 'Twin Lakes / Matterhorn',          lat: 38.106246,  lon: -119.282177 },
+  { id: '8565', name: 'Virginia Lakes',           zone: 'Saddlebag Lake',                   lat: 38.047853,  lon: -119.263006 },
 ]
+
+/** Recreation.gov facility ID by trailhead division ID */
+const FACILITY_BY_DIV = {
+  '456': '233262', '497': '233262', '459': '233262', '482': '233262',
+  '484': '233262', '461': '233262', '495': '233262', '481': '233262',
+  '451': '233262',
+  '8560': '445856', '8561': '445856', '8562': '445856', '8563': '445856',
+  '8564': '445856', '8565': '445856',
+}
+
+export function recGovUrl(divId) {
+  const facilityId = FACILITY_BY_DIV[divId] ?? '233262'
+  return `https://www.recreation.gov/permits/${facilityId}`
+}
 
 /** Convert a bounding box to a GeoJSON Polygon ring */
 export function boundsToPolygon([sw_lat, sw_lng, ne_lat, ne_lng]) {
