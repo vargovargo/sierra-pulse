@@ -44,11 +44,39 @@ const HOOVER_DIVISIONS: Division[] = [
 ]
 
 // ---------------------------------------------------------------------------
+// Yosemite National Park — facility 445859
+// Division IDs are 8-digit numerics (44585901+). Permit season: May 1 – Oct 31.
+// ---------------------------------------------------------------------------
+const YOSEMITE_DIVISIONS: Division[] = [
+  // Tuolumne Meadows trailheads
+  { id: '44585906', name: 'Cathedral Lakes',             zone: 'Tuolumne Meadows' },
+  { id: '44585907', name: 'Cathedral Lakes (overnight)', zone: 'Tuolumne Meadows' },
+  { id: '44585914', name: 'Glen Aulin',                  zone: 'Tuolumne Meadows' },
+  { id: '44585915', name: 'Glen Aulin (overnight)',      zone: 'Tuolumne Meadows' },
+  { id: '44585921', name: 'Lyell Canyon',                zone: 'Tuolumne Meadows' },
+  { id: '44585922', name: 'Lyell Canyon (overnight)',    zone: 'Tuolumne Meadows' },
+  { id: '44585940', name: 'Lyell Canyon (backpacker)',   zone: 'Tuolumne Meadows' },
+  { id: '44585945', name: 'Sunrise Lakes',               zone: 'Tuolumne Meadows' },
+  { id: '44585955', name: 'Young Lakes via Dog Lake',    zone: 'Tuolumne Meadows' },
+  { id: '44585956', name: 'Young Lakes via Glen Aulin',  zone: 'Tuolumne Meadows' },
+  // Yosemite Valley trailheads
+  { id: '44585912', name: 'Glacier Point',               zone: 'Yosemite Valley' },
+  { id: '44585913', name: 'Glacier Point (overnight)',   zone: 'Yosemite Valley' },
+  { id: '44585916', name: 'Happy Isles',                 zone: 'Yosemite Valley' },
+  { id: '44585917', name: 'Happy Isles (overnight)',     zone: 'Yosemite Valley' },
+  { id: '44585918', name: 'Happy Isles (backpacker)',    zone: 'Yosemite Valley' },
+  { id: '44585928', name: 'Mirror Lake → Snow Creek',    zone: 'Yosemite Valley' },
+  { id: '44585935', name: 'Glacier Point (day use)',     zone: 'Yosemite Valley' },
+  { id: '44585954', name: 'Yosemite Falls',              zone: 'Yosemite Valley' },
+]
+
+// ---------------------------------------------------------------------------
 // All facilities — ingest-permits loops through this list
 // ---------------------------------------------------------------------------
 export const FACILITIES: Facility[] = [
-  { id: '233262', forest: 'Inyo National Forest',            divisions: INYO_DIVISIONS },
+  { id: '233262', forest: 'Inyo National Forest',             divisions: INYO_DIVISIONS },
   { id: '445856', forest: 'Humboldt-Toiyabe National Forest', divisions: HOOVER_DIVISIONS },
+  { id: '445859', forest: 'Yosemite National Park',           divisions: YOSEMITE_DIVISIONS },
 ]
 
 // Legacy export — still used by existing ingest logic until refactored

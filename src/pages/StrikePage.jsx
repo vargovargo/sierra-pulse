@@ -7,17 +7,19 @@ import ErrorBoundary       from '../components/shared/ErrorBoundary.jsx'
 
 // Zone → area mapping — derived from zone_config.ts, no DB column needed
 const ZONE_AREA = {
-  'North Lake / Piute Pass':        'Eastern Sierra',
-  'Lake Sabrina':                   'Eastern Sierra',
-  'South Lake / Bishop Pass':       'Eastern Sierra',
-  'Big Pine Creek':                 'Eastern Sierra',
-  'Pine Creek':                     'Eastern Sierra',
+  'North Lake / Piute Pass':          'Eastern Sierra',
+  'Lake Sabrina':                     'Eastern Sierra',
+  'South Lake / Bishop Pass':         'Eastern Sierra',
+  'Big Pine Creek':                   'Eastern Sierra',
+  'Pine Creek':                       'Eastern Sierra',
   'Rock Creek / Little Lakes Valley': 'Eastern Sierra',
-  'Twin Lakes / Matterhorn':        'Hoover Wilderness',
-  'Saddlebag Lake':                 'Hoover Wilderness',
+  'Twin Lakes / Matterhorn':          'Hoover Wilderness',
+  'Saddlebag Lake':                   'Hoover Wilderness',
+  'Tuolumne Meadows':                 'Yosemite',
+  'Yosemite Valley':                  'Yosemite',
 }
 
-const AREAS = ['Eastern Sierra', 'Hoover Wilderness']
+const AREAS = ['Eastern Sierra', 'Hoover Wilderness', 'Yosemite']
 
 function areaOf(w) {
   return ZONE_AREA[w.zone] ?? 'Other'

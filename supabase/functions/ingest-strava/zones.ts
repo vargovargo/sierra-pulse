@@ -20,6 +20,10 @@ export const ZONES: Zone[] = [
   // --- Hoover Wilderness / Tioga area ---
   { name: 'Twin Lakes / Matterhorn',         bounds: [38.15, -119.42, 38.30, -119.28] },
   { name: 'Saddlebag Lake',                  bounds: [37.93, -119.32, 38.02, -119.22] },
+
+  // --- Yosemite National Park ---
+  { name: 'Tuolumne Meadows',               bounds: [37.82, -119.55, 37.93, -119.28] },
+  { name: 'Yosemite Valley',                bounds: [37.70, -119.65, 37.78, -119.52] },
   // { name: 'Kearsarge Pass / Onion Valley', bounds: [36.73, -118.42, 36.85, -118.25] },
   // { name: 'Shepherd Pass',                 bounds: [36.63, -118.35, 36.75, -118.20] },
   // { name: 'Whitney Portal',                bounds: [36.55, -118.32, 36.67, -118.18] },

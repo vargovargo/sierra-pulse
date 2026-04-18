@@ -202,7 +202,7 @@ View columns: `weekly_efforts`, `last_seen`, `season_opener`, `last_active`, `se
 ### CDEC stations — confirmed live
 17+ live stations. Key stations per area:
 - **Eastern Sierra (Bishop)**: `BSH` (Bishop Pass, 11,200ft), `RCK` (Rock Creek Lakes, 10,000ft) confirmed primary; `SLK`/`GRZ` proxies for North Lake / Sabrina / Big Pine
-- **Hoover / Tioga**: `TUM` (Tuolumne Meadows, 8,619ft), `DAN` (Dana Meadows, ~9,600ft) — proxies for Twin Lakes/Matterhorn + Saddlebag zones
+- **Hoover / Tioga / Yosemite**: `TUM` (Tuolumne Meadows, 8,619ft), `DAN` (Dana Meadows, ~9,600ft) — proxies for Twin Lakes/Matterhorn, Saddlebag, Tuolumne Meadows, and Yosemite Valley zones
 - `PPS`, `BSP`, `BGP`, `ROC` ❌ — don't exist or never returned data
 - Lee Vining Creek has no real-time USGS IV gauge (10287900 and 10288000 both return empty timeSeries) — omitted from ingest
 
@@ -228,9 +228,9 @@ Full schedule:
 | `strike-windows` | `0 */2 * * *` | `compute-strike-windows` |
 
 ### Strava — rate limit
-Strava API limit: 100 req/15min. With 8 active zones: 8 explore + up to 80 detail fetches = near limit.
+Strava API limit: 100 req/15min. With 10 active zones: 10 explore + up to 80 detail fetches = near limit.
 Do not test back-to-back — wait 15min between manual invocations. Daily cron never hits the limit.
-Active zones: 6 Bishop + Twin Lakes/Matterhorn + Saddlebag Lake. More zones commented out in `ingest-strava/zones.ts`.
+Active zones: 6 Bishop + Twin Lakes/Matterhorn + Saddlebag Lake + Tuolumne Meadows + Yosemite Valley. More zones commented out in `ingest-strava/zones.ts`.
 Strava OAuth refresh tokens expire after ~6 months of inactivity. Re-authorize at strava.com/settings/api if token fails (HTTP 401 on refresh).
 Client ID: 209425. Re-auth flow: `/oauth/authorize` → exchange code → `supabase secrets set STRAVA_REFRESH_TOKEN=...` + `STRAVA_CLIENT_SECRET=...`.
 
@@ -238,11 +238,12 @@ Client ID: 209425. Re-auth flow: `/oauth/authorize` → exchange code → `supab
 `ingest-permits` now handles multiple facilities via `FACILITIES` array in `divisions.ts`.
 - **Inyo NF** facility `233262`: 9 divisions, permit season ~May 1 – Oct 31
 - **Hoover Wilderness / Humboldt-Toiyabe NF** facility `445856`: 6 divisions (8560–8565), permit season June 15 – Oct 15, quota-based, $8/person + $6 reservation fee
+- **Yosemite NP** facility `445859`: 18 divisions (44585906–44585956 range), permit season May 1 – Oct 31. Division IDs are 8-digit numerics. Duplicate IDs at the same trailhead represent different quota types (day use / overnight / backpacker).
 
 Division IDs sourced from `https://www.recreation.gov/api/permitcontent/{facilityId}` (returns GeoJSON with coordinates).
 Availability endpoint: `GET https://www.recreation.gov/api/permitinyo/{facilityId}/availabilityv2?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD&commercial_acct=false`
-— note `permitinyo` path works for both Inyo and Hoover facilities despite the name.
-`TRAILHEADS` in `src/lib/zones.js` has coordinates for all 15 divisions. `recGovUrl(divId)` returns the correct facility URL per trailhead.
+— note `permitinyo` path works for Inyo, Hoover, and Yosemite NPS facilities.
+`TRAILHEADS` in `src/lib/zones.js` has coordinates for all 33 divisions. `recGovUrl(divId)` returns the correct facility URL per trailhead.
 
 ### Map — Strava trail segment markers
 `MapView.jsx` already has `trail_segment` marker style (green ▲) and `effort_count` param wired.

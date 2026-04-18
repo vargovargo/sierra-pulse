@@ -36,6 +36,15 @@ export const ZONES = [
     name:   'Saddlebag Lake',
     bounds: [37.93, -119.32, 38.02, -119.22],
   },
+  // Yosemite National Park
+  {
+    name:   'Tuolumne Meadows',
+    bounds: [37.82, -119.55, 37.93, -119.28],
+  },
+  {
+    name:   'Yosemite Valley',
+    bounds: [37.70, -119.65, 37.78, -119.52],
+  },
 ]
 
 /**
@@ -59,6 +68,25 @@ export const TRAILHEADS = [
   { id: '8563', name: 'Horse Creek',              zone: 'Twin Lakes / Matterhorn',          lat: 38.145569,  lon: -119.378665 },
   { id: '8564', name: 'Green Creek',              zone: 'Twin Lakes / Matterhorn',          lat: 38.106246,  lon: -119.282177 },
   { id: '8565', name: 'Virginia Lakes',           zone: 'Saddlebag Lake',                   lat: 38.047853,  lon: -119.263006 },
+  // Yosemite National Park (facility 445859)
+  { id: '44585906', name: 'Cathedral Lakes',              zone: 'Tuolumne Meadows', lat: 37.8733, lon: -119.3827 },
+  { id: '44585907', name: 'Cathedral Lakes (overnight)',  zone: 'Tuolumne Meadows', lat: 37.8733, lon: -119.3827 },
+  { id: '44585914', name: 'Glen Aulin',                   zone: 'Tuolumne Meadows', lat: 37.8787, lon: -119.3583 },
+  { id: '44585915', name: 'Glen Aulin (overnight)',       zone: 'Tuolumne Meadows', lat: 37.8787, lon: -119.3583 },
+  { id: '44585921', name: 'Lyell Canyon',                 zone: 'Tuolumne Meadows', lat: 37.8765, lon: -119.3455 },
+  { id: '44585922', name: 'Lyell Canyon (overnight)',     zone: 'Tuolumne Meadows', lat: 37.8765, lon: -119.3455 },
+  { id: '44585940', name: 'Lyell Canyon (backpacker)',    zone: 'Tuolumne Meadows', lat: 37.8765, lon: -119.3455 },
+  { id: '44585945', name: 'Sunrise Lakes',                zone: 'Tuolumne Meadows', lat: 37.8257, lon: -119.4701 },
+  { id: '44585955', name: 'Young Lakes via Dog Lake',     zone: 'Tuolumne Meadows', lat: 37.8785, lon: -119.3389 },
+  { id: '44585956', name: 'Young Lakes via Glen Aulin',   zone: 'Tuolumne Meadows', lat: 37.8774, lon: -119.3536 },
+  { id: '44585912', name: 'Glacier Point',                zone: 'Yosemite Valley',  lat: 37.7279, lon: -119.5738 },
+  { id: '44585913', name: 'Glacier Point (overnight)',    zone: 'Yosemite Valley',  lat: 37.7279, lon: -119.5738 },
+  { id: '44585916', name: 'Happy Isles',                  zone: 'Yosemite Valley',  lat: 37.7325, lon: -119.5580 },
+  { id: '44585917', name: 'Happy Isles (overnight)',      zone: 'Yosemite Valley',  lat: 37.7325, lon: -119.5580 },
+  { id: '44585918', name: 'Happy Isles (backpacker)',     zone: 'Yosemite Valley',  lat: 37.7325, lon: -119.5580 },
+  { id: '44585928', name: 'Mirror Lake → Snow Creek',     zone: 'Yosemite Valley',  lat: 37.7393, lon: -119.5595 },
+  { id: '44585935', name: 'Glacier Point (day use)',      zone: 'Yosemite Valley',  lat: 37.7279, lon: -119.5738 },
+  { id: '44585954', name: 'Yosemite Falls',               zone: 'Yosemite Valley',  lat: 37.7427, lon: -119.6033 },
 ]
 
 /** Recreation.gov facility ID by trailhead division ID */
@@ -68,6 +96,11 @@ const FACILITY_BY_DIV = {
   '451': '233262',
   '8560': '445856', '8561': '445856', '8562': '445856', '8563': '445856',
   '8564': '445856', '8565': '445856',
+  '44585906': '445859', '44585907': '445859', '44585914': '445859', '44585915': '445859',
+  '44585921': '445859', '44585922': '445859', '44585940': '445859', '44585945': '445859',
+  '44585955': '445859', '44585956': '445859',
+  '44585912': '445859', '44585913': '445859', '44585916': '445859', '44585917': '445859',
+  '44585918': '445859', '44585928': '445859', '44585935': '445859', '44585954': '445859',
 }
 
 export function recGovUrl(divId) {
